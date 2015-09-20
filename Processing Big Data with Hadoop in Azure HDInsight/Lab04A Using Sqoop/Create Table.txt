@@ -1,0 +1,7 @@
+﻿CREATE TABLE weather
+([Year] int PRIMARY KEY CLUSTERED,
+ [AvgMaxTemp] float,
+ [AvgMinTemp] float,
+ [FrostDays] int,
+ [Rainfall] float,
+ [Sunshine] float);

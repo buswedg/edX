@@ -1,0 +1,8 @@
+set hive.execution.engine=tez;
+
+add file wasb:///data/convert_bytes.py;
+
+SELECT TRANSFORM (log_date, requests, inbound_bytes, outbound_bytes)
+  USING 'D:\Python27\python.exe convert_bytes.py' AS
+  (log_date string, requests int, inbound_mbytes float, outbound_mbytes float)
+FROM vDailySummary;

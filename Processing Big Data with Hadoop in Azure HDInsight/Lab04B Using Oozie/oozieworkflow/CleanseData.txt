@@ -1,0 +1,3 @@
+StagedLogs = LOAD '$StagingFolder' AS (logentry:chararray);
+CleanLogs = FILTER StagedLogs BY SUBSTRING(logentry, 0, 1) != '#';
+STORE CleanLogs INTO '$CleansedFolder';

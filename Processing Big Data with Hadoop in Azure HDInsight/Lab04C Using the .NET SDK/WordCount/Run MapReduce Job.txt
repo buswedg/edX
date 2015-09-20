@@ -1,0 +1,58 @@
+$clusterName = "hd------"
+$storageAccountName = $clusterName+ "store"
+$containerName = "hdfiles"
+
+#Clean up previous execution
+$thisfolder = Split-Path -parent $MyInvocation.MyCommand.Definition
+$remoteFolder = "streamingexample"
+$storageAccountKey = Get-AzureStorageKey $storageAccountName | %{ $_.Primary }
+$storeContext = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+If (Test-Path "$remoteFolder/output") {
+  Remove-Item "$remoteFolder/output" -Recurse -Force
+}
+Get-AzureStorageBlob -Container $containerName -blob *$remoteFolder* -Context $storeContext | ForEach-Object {Remove-AzureStorageBlob -Blob $_.Name -Container $containerName -Context $storeContext}
+
+
+# Upload Data Files
+$localFolder = "$thisfolder\SourceData"
+$destSrc = "$remoteFolder/sourcedata"
+$files = Get-ChildItem $localFolder
+foreach($file in $files){
+  $fileName = "$localFolder\$file"
+  $blobName = "$destSrc/$file"
+  Set-AzureStorageBlobContent -File $filename -Container $containerName -Blob $blobName -Context $storeContext -Force
+}
+
+# Upload MapReduce executables
+$destMR = "$remoteFolder/mapreduce"
+$mapper = "WordCountMapper.exe"
+$reducer = "WordCountReducer.exe"
+$mapperfile = "$thisfolder\WordCountMapper\bin\Debug\$mapper"
+$reducerfile = "$thisfolder\WordCountReducer\bin\Debug\$reducer"
+Set-AzureStorageBlobContent -File $mapperfile -Container $containerName -Blob "$destMR/$mapper" -Context $storeContext -Force
+Set-AzureStorageBlobContent -File $reducerfile -Container $containerName -Blob "$destMR/$reducer" -Context $storeContext -Force
+
+#Submit streaming MapReduce job
+$destOut = "$remoteFolder/output"
+$destStatus = "$remoteFolder/status"
+$mrMapperFile = "wasb://$containerName@$storageAccountName.blob.core.windows.net/$destMR/$mapper"
+$mrReducerFile = "wasb://$containerName@$storageAccountName.blob.core.windows.net/$destMR/$reducer"
+$mrInput = "wasb://$containerName@$storageAccountName.blob.core.windows.net/$destSrc/"
+$mrOutput = "wasb://$containerName@$storageAccountName.blob.core.windows.net/$destOut/"
+$mrStatusOutput = "wasb://$containerName@$storageAccountName.blob.core.windows.net/$destStatus/"
+
+$mrJobDef = New-AzureHDInsightStreamingMapReduceJobDefinition -JobName mrWordCountStreamingJob -StatusFolder $mrStatusOutput -Mapper $mapper -Reducer $reducer -InputPath $mrInput -OutputPath $mrOutput
+$mrJobDef.Files.Add($mrMapperFile)
+$mrJobDef.Files.Add($mrReducerFile)
+
+Write-Host "Submitting streaming MapReduce job" -ForegroundColor Green
+$mrJob = Start-AzureHDInsightJob -Cluster $clusterName -JobDefinition $mrJobDef 
+Wait-AzureHDInsightJob -Job $mrJob -WaitTimeoutInSeconds 3600 
+
+# Download the job results
+$remoteblob = "$destOut/part-00000"
+Get-AzureStorageBlobContent -Container $containerName -Blob $remoteblob -Context $storeContext -Destination $thisfolder
+
+
+
+

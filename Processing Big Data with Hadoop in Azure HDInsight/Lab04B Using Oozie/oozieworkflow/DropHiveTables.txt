@@ -1,0 +1,8 @@
+set hive.execution.engine=tez;
+
+DROP TABLE IF EXISTS ${CLEANSED_TABLE_NAME};
+DROP TABLE IF EXISTS ${SUMMARY_TABLE_NAME};
+
+
+
+ 

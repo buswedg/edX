@@ -1,0 +1,5 @@
+INSERT OVERWRITE TABLE ${SUMMARY_TABLE_NAME}
+SELECT log_date, COUNT(*), SUM(sc_bytes), SUM(cs_bytes)
+FROM ${CLEANSED_TABLE_NAME}
+GROUP BY log_date
+ORDER BY log_date ASC;

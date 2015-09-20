@@ -1,0 +1,5 @@
+-- Load the weather source data
+Source = LOAD '/data/temp/source' USING PigStorage(' ') AS (year:chararray, month:int, maxtemp:float, mintemp:float, frostdays:int, rainfall:float, sunshinehours:float);
+--  Fields with incompatible data type values are discarded
+-- Save the scrubbed data
+STORE Source INTO '/data/temp/pigoutput';

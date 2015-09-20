@@ -1,0 +1,5 @@
+SELECT log_date, COUNT(*), SUM(sc_bytes), SUM(cs_bytes)
+FROM rawlog
+WHERE SUBSTR(log_date, 1, 1) <> '#'
+GROUP BY log_date 
+ORDER BY log_date;

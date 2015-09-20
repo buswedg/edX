@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.22823.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WordCountMapper", "WordCountMapper\WordCountMapper.csproj", "{6F0A27BD-0F01-438D-B856-52E0E5FA1D24}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WordCountReducer", "WordCountReducer\WordCountReducer.csproj", "{7C607C47-F98C-4C6F-8194-8B436EA77418}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6F0A27BD-0F01-438D-B856-52E0E5FA1D24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F0A27BD-0F01-438D-B856-52E0E5FA1D24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F0A27BD-0F01-438D-B856-52E0E5FA1D24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F0A27BD-0F01-438D-B856-52E0E5FA1D24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C607C47-F98C-4C6F-8194-8B436EA77418}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C607C47-F98C-4C6F-8194-8B436EA77418}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C607C47-F98C-4C6F-8194-8B436EA77418}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C607C47-F98C-4C6F-8194-8B436EA77418}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

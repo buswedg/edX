@@ -1,0 +1,11 @@
+set hive.execution.engine=tez;
+
+CREATE VIEW vDailySummary
+AS
+SELECT log_date,
+       COUNT(*) AS requests,
+       SUM(cs_bytes) AS inbound_bytes,
+       SUM(sc_bytes) AS outbound_bytes
+FROM rawlog
+WHERE SUBSTR(log_date, 1, 1) <> '#'
+GROUP BY log_date;

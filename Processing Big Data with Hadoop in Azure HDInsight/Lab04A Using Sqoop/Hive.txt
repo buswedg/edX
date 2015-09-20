@@ -1,0 +1,25 @@
+set hive.execution.engine=tez;
+
+DROP TABLE tempdata;
+
+DROP TABLE tempsummary;
+
+CREATE EXTERNAL TABLE tempdata
+(Year INT,
+ Month INT,
+ MaxTemp FLOAT,
+ MinTemp FLOAT,
+ FrostDays INT,
+ Rainfall FLOAT,
+ SunshineHours FLOAT)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE LOCATION '/data/temp/pigoutput';
+
+CREATE TABLE tempsummary
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE LOCATION '/data/temp/hivetable'
+AS
+SELECT Year, AVG(MaxTemp) AS AvgMaxTemp, AVG(MinTemp) AS AvgMinTemp, SUM(FrostDays) AS FrostDays, SUM(Rainfall) AS Ranfall, SUM(SunshineHours) AS SunshineHours
+FROM tempdata
+GROUP BY Year
+ORDER BY Year;

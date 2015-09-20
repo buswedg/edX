@@ -1,0 +1,12 @@
+﻿$clusterName = "uniqueclustername"
+$storageAccountName = "uniquestoragename"
+
+# Delete HDInsight
+Write-Host "Deleting $clusterName HDInsight cluster..."
+Remove-AzureHDInsightCluster -Name $clusterName
+
+# Delete storage account
+Write-Host "Deleting $storageAccountName storage account..."
+Remove-AzureStorageAccount -StorageAccountName $storageAccountName
+
+Write-Host "Finished!"

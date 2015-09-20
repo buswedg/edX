@@ -1,0 +1,12 @@
+﻿$clusterName = Read-Host "Enter the name of the cluster to be deleted"
+$storageAccountName = $clusterName + "store"
+
+# Delete HDInsight
+Write-Host "Deleting $clusterName HDInsight cluster..."
+Remove-AzureHDInsightCluster -Name $clusterName
+
+# Delete storage account
+Write-Host "Deleting $storageAccountName storage account..."
+Remove-AzureStorageAccount -StorageAccountName $storageAccountName
+
+Read-Host "Press ENTER to end the script"

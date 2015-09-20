@@ -1,0 +1,30 @@
+$clusterName = "hd------"
+$storageAccountName = $clusterName + "store"
+$containerName = "hdfiles"
+
+$thisfolder = Split-Path -parent $MyInvocation.MyCommand.Definition
+$storageAccountKey = Get-AzureStorageKey $storageAccountName | %{ $_.Primary }
+$destContext = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+
+# Create Hive Table
+Write-Host "Creating Hive table..."
+$file = "CreateHiveTable.txt"
+$blobName = "data/CreateTable.hql"
+Set-AzureStorageBlobContent -File $thisfolder\$file -Container $containerName -Blob $blobName -Context $destContext -Force
+$jobDef = New-AzureHDInsightHiveJobDefinition -File "wasb:///$blobName"
+$hiveJob = Start-AzureHDInsightJob –Cluster $clusterName –JobDefinition $jobDef
+Write-Host "HiveQL job submitted..."
+Wait-AzureHDInsightJob -Job $hiveJob -WaitTimeoutInSeconds 3600
+Get-AzureHDInsightJobOutput -Cluster $clusterName -JobId $hiveJob.JobId -StandardError
+
+# Upload Data Files
+Write-Host "Uploading data files..."
+$localFolder = "$thisfolder\iislogs_gz"
+$destfolder = "data/logs"
+$files = Get-ChildItem $localFolder
+foreach($file in $files){
+  $fileName = "$localFolder\$file"
+  $blobName = "$destfolder/$file"
+  Set-AzureStorageBlobContent -File $filename -Container $containerName -Blob $blobName -Context $destContext -Force
+}
+

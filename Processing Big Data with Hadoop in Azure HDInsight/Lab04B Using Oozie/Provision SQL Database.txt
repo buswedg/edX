@@ -1,0 +1,37 @@
+﻿$dbName = "AnalysisDB"
+$userName = "SQLUser"
+
+#Generate random password
+$rand = New-Object System.Random
+$pass = ""
+$pass = $pass + [char]$rand.next(65,90) #upper case
+$pass = $pass + [char]$rand.next(48,57) #number
+$pass = $pass + [char]$rand.next(97,122) #lower case
+$pass = $pass + [char]$rand.next(65,90) #upper case
+1..6 | ForEach { $pass = $pass + [char]$rand.next(97,121) } # 6 lowercase characters
+
+# Create a SQL Database Server
+Write-Host "Creating Azure SQL Database Server..."
+$sqlServer = New-AzureSqlDatabaseServer -AdministratorLogin $userName -AdministratorLoginPassword $pass -Location "Southeast Asia" -Version "12.0"
+
+# Configure firewall
+Write-Host "Configuring firewall rules..."
+$sqlServer | New-AzureSqlDatabaseServerFirewallRule -RuleName "All_Internet" -StartIpAddress "0.0.0.0" -EndIpAddress "255.255.255.255"
+$sqlServer | New-AzureSqlDatabaseServerFirewallRule -AllowAllAzureServices -Force
+
+# Create a database
+Write-Host "Creating $dbName database..."
+$password = ConvertTo-SecureString $pass -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential($userName, $password)
+$ctx = $sqlServer | New-AzureSqlDatabaseServerContext -Credential $cred
+New-AzureSqlDatabase -ConnectionContext $ctx -DatabaseName $dbName
+
+$sname = $sqlServer.ServerName
+Write-Host "----------------------------------------------"
+Write-Host "Created Azure SQL Database server $sName"
+Write-Host "Admin login: $userName, Password: $pass"
+Write-Host "Make a note of these details."
+Write-Host ""
+Write-Host "IMPORTANT: A firewall rule that permits access from any Internet-connected device has been created."
+Write-Host "Consider replacing this firewall rule with one that allows access only from your computer."
+Read-Host "Press ENTER to end the script"

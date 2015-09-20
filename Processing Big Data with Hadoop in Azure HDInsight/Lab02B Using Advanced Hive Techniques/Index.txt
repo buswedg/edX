@@ -1,0 +1,6 @@
+set hive.execution.engine=tez;
+
+CREATE INDEX idx_month ON TABLE indexedlog(log_month)
+AS 'COMPACT'
+WITH DEFERRED REBUILD;
+

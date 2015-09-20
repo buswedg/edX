@@ -1,0 +1,41 @@
+﻿$containerName = "hdfiles"
+$location = "Southeast Asia"
+$clusterNodes = 2
+$userName = "HDUser"
+
+#Generate random password
+$rand = New-Object System.Random
+$pass = ""
+$pass = $pass + [char]$rand.next(97,121) #lower case
+$pass = $pass + [char]$rand.next(48,57) #number
+$pass = $pass + [char]$rand.next(65,90) #upper case
+$pass = $pass + [char]$rand.next(58,62) #special character
+1..6 | ForEach { $pass = $pass + [char]$rand.next(97,121) } #6 lower-case characters
+$password = ConvertTo-SecureString $pass -AsPlainText -Force
+
+# generate unique random cluster and storage account names
+do
+{
+  $clusterName = "hd"
+  1..6 | ForEach { $clusterName = $clusterName + [char]$rand.next(48,57) }
+  $storageAccountName = $clusterName + "store"
+}
+while ((Test-AzureName -Name $storageAccountName -Storage) -and (Test-AzureName -Name $clusterName -Service))
+
+# Create a storage account
+Write-Host "Creating storage account..."
+New-AzureStorageAccount -StorageAccountName $storageAccountName -Location $location
+
+# Create a Blob storage container
+Write-Host "Creating container..."
+$storageAccountKey = Get-AzureStorageKey $storageAccountName | %{ $_.Primary }
+$destContext = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+New-AzureStorageContainer -Name $containerName -Context $destContext
+
+# Create a cluster
+Write-Host "Creating HDInsight cluster..."
+$credential = New-Object System.Management.Automation.PSCredential ($userName, $password)
+New-AzureHDInsightCluster -Name $clusterName -Location $location -DefaultStorageAccountName "$storageAccountName.blob.core.windows.net" -DefaultStorageAccountKey $storageAccountKey -DefaultStorageContainerName $containerName -ClusterSizeInNodes $clusterNodes -Credential $credential -Version 3.2
+Write-Host "Created HDInsight cluster $clusterName with storage account $storageAccountName and container $containerName"
+Write-Host "HTTP User Name: $userName, Password: $pass"
+Read-Host "Make a note of these details, and then press ENTER to end the script"

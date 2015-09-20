@@ -1,0 +1,23 @@
+﻿$storageAccountName = "uniquestoragename"
+$location = "West Europe"
+$containerName = "containername"
+$clusterName = "uniqueclustername"
+$clusterNodes = 2
+$userName = "username"
+$password = ConvertTo-SecureString "SecurePa`$`$w0rd" -AsPlainText -Force
+
+# Create a storage account
+Write-Host "Creating storage account..."
+New-AzureStorageAccount -StorageAccountName $storageAccountName -Location $location
+
+# Create a Blob storage container
+Write-Host "Creating container..."
+$storageAccountKey = Get-AzureStorageKey $storageAccountName | %{ $_.Primary }
+$destContext = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+New-AzureStorageContainer -Name $containerName -Context $destContext
+
+# Create a cluster
+Write-Host "Creating HDInsight cluster..."
+$credential = New-Object System.Management.Automation.PSCredential ($userName, $password)
+New-AzureHDInsightCluster -Name $clusterName -Location $location -DefaultStorageAccountName "$storageAccountName.blob.core.windows.net" -DefaultStorageAccountKey $storageAccountKey -DefaultStorageContainerName $containerName -ClusterSizeInNodes $clusterNodes -Credential $credential -Version 3.2
+Write-Host "Finished!"

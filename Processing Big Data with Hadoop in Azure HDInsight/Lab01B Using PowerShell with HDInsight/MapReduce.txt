@@ -1,0 +1,41 @@
+$clusterName = "uniqueclustername"
+$storageAccountName = "uniquestoragename"
+$containerName = "containername"
+
+$thisfolder = Split-Path -parent $MyInvocation.MyCommand.Definition
+$localFolder = "$thisfolder\Reviews"
+$remotefolder = "reviewprocessing"
+$storageAccountKey = (Get-AzureStorageKey -StorageAccountName $storageAccountName).Primary
+$blobContext = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+
+
+# Remove output from previous execution
+If (Test-Path "$thisfolder\$remotefolder") {
+  Remove-Item "$thisfolder\$remotefolder" -Recurse -Force
+}
+Get-AzureStorageBlob -Container $containerName -blob *$remotefolder* -Context $blobContext | ForEach-Object {Remove-AzureStorageBlob -Blob $_.Name -Container $containerName -Context $blobContext}
+
+# Upload data files
+$files = Get-ChildItem $localFolder
+foreach($file in $files){
+  $fileName = "$localFolder\$file"
+  $blobName = "$remotefolder/$file"
+  Set-AzureStorageBlobContent -File $filename -Container $containerName -Blob $blobName -Context $blobContext -Force
+}
+write-host "All files in $localFolder uploaded to $containerName!"
+
+# Run a Map/Reduce job
+$jobDef = New-AzureHDInsightMapReduceJobDefinition -JarFile "wasb:///example/jars/hadoop-mapreduce-examples.jar" -ClassName "wordcount" -Arguments "wasb:///$remotefolder", "wasb:///$remotefolder/output"
+$wordCountJob = Start-AzureHDInsightJob –Cluster $clusterName –JobDefinition $jobDef
+Write-Host "Map/Reduce job submitted..."
+
+# Wait, and then display job output information
+Wait-AzureHDInsightJob -Job $wordCountJob -WaitTimeoutInSeconds 3600
+Get-AzureHDInsightJobOutput -Cluster $clusterName -JobId $wordCountJob.JobId -StandardError
+
+# Download the job results
+$remoteblob = "$remotefolder/output/part-r-00000"
+Get-AzureStorageBlobContent -Container $containerName -Blob $remoteblob -Context $blobContext -Destination $thisfolder
+
+#Display the results
+cat $thisfolder\$remotefolder\output\part-r-00000

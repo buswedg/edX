@@ -1,0 +1,94 @@
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="IisLogWorkflow">
+  <start to="PrepareHive"/>
+  <action name='PrepareHive'>
+    <hive xmlns="uri:oozie:hive-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>default</value>
+        </property>
+      </configuration>
+      <script>${DropTableScript}</script>
+        <param>CLEANSED_TABLE_NAME=${cleansedTable}</param>
+        <param>SUMMARY_TABLE_NAME=${summaryTable}</param>
+    </hive>
+    <ok to="CleanseData"/>
+    <error to="fail"/>
+  </action>
+  <action name="CleanseData">
+    <pig>
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <script>${CleanseDataScript}</script>
+      <param>StagingFolder=${stagingFolder}</param>
+      <param>CleansedFolder=${cleansedFolder}</param>
+    </pig>
+    <ok to="CreateTables"/>
+    <error to="fail"/>
+  </action>
+  <action name='CreateTables'>
+    <hive xmlns="uri:oozie:hive-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>default</value>
+        </property>
+      </configuration>
+      <script>${CreateTableScript}</script>
+      <param>CLEANSED_TABLE_NAME=${cleansedTable}</param>
+      <param>CLEANSED_TABLE_LOCATION=${cleansedFolder}</param>
+      <param>SUMMARY_TABLE_NAME=${summaryTable}</param>
+      <param>SUMMARY_TABLE_LOCATION=${summaryFolder}</param>
+    </hive>
+    <ok to="SummarizeData"/>
+    <error to="fail"/>
+  </action>
+  <action name='SummarizeData'>
+    <hive xmlns="uri:oozie:hive-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>default</value>
+        </property>
+      </configuration>
+      <script>${SummarizeDataScript}</script>
+      <param>CLEANSED_TABLE_NAME=${cleansedTable}</param>
+      <param>SUMMARY_TABLE_NAME=${summaryTable}</param>
+    </hive>
+    <ok to="TransferData"/>
+    <error to="fail"/>
+  </action>
+  <action name="TransferData">
+    <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.compress.map.output</name>
+          <value>true</value>
+        </property>
+      </configuration>
+      <arg>export</arg>
+      <arg>--connect</arg>
+      <arg>${sqlConnectionString}</arg>
+      <arg>--table</arg>
+      <arg>${sqlTable}</arg>
+      <arg>--export-dir</arg>
+      <arg>${sourceDir}</arg>
+      <arg>--input-fields-terminated-by</arg>
+      <arg>\t</arg>
+    </sqoop>
+    <ok to="end"/>
+    <error to="fail"/>
+  </action>
+  <kill name="fail">
+    <message>Workflow failed, error message[${wf:errorMessage(wf:lastErrorNode())}] </message>
+  </kill>
+  <end name="end"/>
+</workflow-app>
