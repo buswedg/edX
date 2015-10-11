@@ -1,0 +1,19 @@
+#Execute R Script
+frame1 <- maml.mapInputPort(1)
+## Delete instant and dteday columns
+frame1$instant <- NULL
+frame1$dteday <- NULL
+maml.mapOutputPort('frame1')
+
+
+#Execute Python Script
+def azureml_main(dataframe1 = None, dataframe2 = None):
+## delete yr and weathersit columns
+    dataframe1.drop(['yr', 'weathersit'], 1, inplace = True)
+    return dataframe1
+
+
+--Apply SQL Transformation
+SELECT *, hum*hum AS humsqrd FROM t1
+WHERE mnth BETWEEN 1 AND 12
+AND hr BETWEEN 0 AND 23;
