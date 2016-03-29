@@ -1,0 +1,9 @@
+SET hive.execution.engine=tez;
+CREATE EXTERNAL TABLE StockPrices
+(Stock STRING,
+ ClosingPrice FLOAT,
+ CurrentPrice FLOAT)
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+WITH SERDEPROPERTIES
+ ('hbase.columns.mapping' = ':key,Closing:Price,Current:Price')
+TBLPROPERTIES ('hbase.table.name' = 'Stocks');

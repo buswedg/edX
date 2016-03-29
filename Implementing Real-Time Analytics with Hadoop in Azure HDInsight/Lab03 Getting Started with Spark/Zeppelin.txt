@@ -1,0 +1,20 @@
+// Load HVAC file and save as a temp table
+val csv = sc.textFile("/HdiSamples/SensorSampleData/hvac/HVAC.csv")
+
+case class schma(Date: String, Time: String, TargetTemp: Integer, ActualTemp: Integer, BuildingID: String)
+
+val hvac = csv.map(s => s.split(",")).filter(s => s(0) != "Date").map(
+    s => schma(s(0),
+            s(1),
+            s(2).toInt,
+            s(3).toInt,
+            s(6)
+    )
+).toDF()
+
+hvac.registerTempTable("hvac")
+
+
+
+// Query the table
+%sql SELECT BuildingID, (TargetTemp - ActualTemp) AS Temp_Diff FROM hvac WHERE Date = "6/1/13"

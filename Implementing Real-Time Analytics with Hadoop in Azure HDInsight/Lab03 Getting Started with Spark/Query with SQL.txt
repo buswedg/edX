@@ -1,0 +1,1 @@
+SELECT h.Date, b.BuildingID, b.HVACProduct, MAX(h.ActualTemp) AS MaxTemp FROM hvac AS h JOIN building AS b ON h.BuildingID = b.BuildingID GROUP BY h.Date, b.BuildingID, b.HVACProduct;

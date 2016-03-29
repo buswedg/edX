@@ -1,0 +1,16 @@
+$resourceGroup = "resource-group-name"
+$storageAccountName = "storeage-account-name"
+$containerName = "container-name"
+
+# Switch to Resource Manager mode
+Switch-AzureMode -Name AzureResourceManager
+
+# Get storage source and destination
+$thisfolder = Split-Path -parent $MyInvocation.MyCommand.Definition
+$storageAccountKey = (Get-AzureStorageAccountKey -StorageAccountName $storageAccountName -ResourceGroupName $resourceGroup).Key1
+$blobContext = New-AzureStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+
+# Upload data
+$localfile = "$thisfolder\stocks.txt"
+$destBlob = "data/stocks.txt"
+Set-AzureStorageBlobContent -File $localFile -Container $containerName -Blob $destBlob -Context $blobContext -Force

@@ -1,0 +1,86 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.SCP;
+using Microsoft.HBase.Client;
+using org.apache.hadoop.hbase.rest.protobuf.generated;
+
+namespace SensorStream
+{
+    public class Bolt : ISCPBolt
+    {
+        private Context ctx;
+        private DateTime readingTime;
+        private string sensorName;
+        private int sensorValue;
+        string clusterURL = "https://clustername.azurehdinsight.net";
+        string hadoopUsername = "username";
+        string hadoopUserPassword = "password";
+
+        // add variables for retry logic
+        private bool enableAck = false;
+
+        public Bolt(Context ctx)
+        {
+            this.ctx = ctx;
+
+            Dictionary<string, List<Type>> inputSchema = new Dictionary<string, List<Type>>();
+            inputSchema.Add("default", new List<Type>() { typeof(DateTime), typeof(string), typeof(int) });
+            this.ctx.DeclareComponentSchema(new ComponentStreamSchema(inputSchema, null));
+
+            // Set enableAck flag based on config in spec file
+            if (Context.Config.pluginConf.ContainsKey(Constants.NONTRANSACTIONAL_ENABLE_ACK))
+            {
+                enableAck = (bool)(Context.Config.pluginConf[Constants.NONTRANSACTIONAL_ENABLE_ACK]);
+            }
+        }
+
+        public static Bolt Get(Context ctx, Dictionary<string, Object> parms)
+        {
+            return new Bolt(ctx);
+        }
+
+        public void Execute(SCPTuple tuple)
+        {
+            // Get data from tuple
+            readingTime = (DateTime)tuple.GetValue(0);
+            sensorName = tuple.GetString(1);
+            sensorValue = tuple.GetInteger(2);
+
+            // log tuple
+            Context.Logger.Info("Sensor Reading", sensorName);
+
+            try
+            {
+                // Insert live data into an HBase table.
+                // assumes HBase table created with the following statement
+                // create "Sensors", "Reading"
+                ClusterCredentials creds = new ClusterCredentials(new Uri(clusterURL), hadoopUsername, hadoopUserPassword);
+                HBaseClient hbaseClient = new HBaseClient(creds);
+
+                CellSet cellSet = new CellSet();
+                CellSet.Row cellSetRow = new CellSet.Row { key = Encoding.UTF8.GetBytes(sensorName) };
+                cellSet.rows.Add(cellSetRow);
+                Cell valueCell = new Cell { column = Encoding.UTF8.GetBytes("Reading:Value"), data = Encoding.UTF8.GetBytes(sensorValue.ToString()) };
+                cellSetRow.values.Add(valueCell);
+                Cell timeCell = new Cell { column = Encoding.UTF8.GetBytes("Reading:LastUpdated"), data = Encoding.UTF8.GetBytes(readingTime.ToString()) };
+                cellSetRow.values.Add(timeCell);
+                hbaseClient.StoreCells("Sensors", cellSet);
+
+                if (enableAck)
+                {
+                    ctx.Ack(tuple);
+                }
+            }
+            catch (Exception ex)
+            {
+                Context.Logger.Error("Sensor Write Error", ex.Message);
+
+                if (enableAck)
+                {
+                    ctx.Fail(tuple);
+                }
+            }
+        }
+    }
+}

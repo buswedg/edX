@@ -1,0 +1,30 @@
+# initialize context
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+from pyspark.sql.types import *
+
+sc = SparkContext('spark://headnodehost:7077', 'pyspark')
+sqlContext = SQLContext(sc)
+
+
+
+# Load text file
+csv = sc.textFile("/HdiSamples/SensorSampleData/building/building.csv")
+csv.collect()
+
+
+
+# Ceate temp table
+schma = StructType([StructField("BuildingID", IntegerType(), False),StructField("BuildingAge", IntegerType(), False),StructField("HVACProduct", StringType(), False), StructField("CountryRegion", StringType(), False)])
+
+data = csv.map(lambda s: s.split(",")).filter(lambda s: s[0] != "BuildingID").map(lambda s:(int(s[0]), int(s[2]), str(s[3]), str(s[4]) ))
+
+df = sqlContext.createDataFrame(data,schma)
+
+df.registerAsTable("tmpBuildings")
+
+
+
+# Query temp table
+results = sqlContext.sql("SELECT BuildingID, HVACProduct, CountryRegion FROM tmpBuildings WHERE BuildingAge < 10")
+results.show()

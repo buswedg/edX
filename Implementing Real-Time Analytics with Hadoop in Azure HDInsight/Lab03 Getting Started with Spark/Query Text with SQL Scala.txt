@@ -1,0 +1,28 @@
+
+// load text file
+val csv = sc.textFile("/HdiSamples/SensorSampleData/hvac/HVAC.csv")
+
+// define schema
+case class schma(Date: String, Time: String, TargetTemp: Integer, ActualTemp: Integer, BuildingID: Integer)
+
+// parse data to dataframe
+val df = csv.map(s => s.split(",")).filter(s => s(0) != "Date").map(
+    s => schma(s(0),
+            s(1),
+            s(2).toInt,
+            s(3).toInt,
+            s(6).toInt
+    )
+).toDF()
+
+// create temp table
+df.registerTempTable("tmpHvac")
+
+// query table
+val readings = sqlContext.sql("select * from tmpHvac")
+
+// show results
+readings.show()
+
+// Save as table
+df.saveAsTable("hvac")

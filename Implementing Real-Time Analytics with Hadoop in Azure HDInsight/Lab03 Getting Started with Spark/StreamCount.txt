@@ -1,0 +1,24 @@
+from pyspark import SparkConf, SparkContext
+from pyspark.streaming import StreamingContext
+
+# Create a StreamingContext
+cnf = SparkConf().setMaster("local").setAppName("StreamCount")
+sc = SparkContext(conf = cnf)
+ssc = StreamingContext(sc, 1)
+ssc.checkpoint("/chkpnt")
+
+
+# Define a text file stream for the /stream folder
+streamRdd = ssc.textFileStream("/stream")
+
+# count the words
+words = streamRdd.flatMap(lambda line: line.split(" "))
+pairs = words.map(lambda word: (word, 1))
+wordCounts = pairs.reduceByKeyAndWindow(lambda a, b: a + b, lambda x, y: x - y, 60, 10)
+
+# Print the first ten elements
+wordCounts.pprint()
+
+ssc.start()
+ssc.awaitTermination()
+

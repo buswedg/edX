@@ -1,0 +1,23 @@
+import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.streaming.eventhubs.EventHubsUtils
+import sqlContext.implicits._
+
+val ehParams = Map[String, String](
+  "eventhubs.policyname" -> "receivepolicy",
+  "eventhubs.policykey" -> "receivepolicy_key",
+  "eventhubs.namespace" -> "event_hub_namespace_name",
+  "eventhubs.name" -> "event_hub_name",
+  "eventhubs.partition.count" -> "2",
+  "eventhubs.consumergroup" -> "$default",
+  "eventhubs.checkpoint.dir" -> "/chk",
+  "eventhubs.checkpoint.interval" -> "10"
+)
+
+val ssc =  new StreamingContext(sc, Seconds(10))
+val stream = EventHubsUtils.createUnionStream(ssc, ehParams)
+
+case class Message(msg: String)
+stream.map(msg=>Message(new String(msg))).foreachRDD(rdd=>rdd.toDF().registerTempTable("sensors"))
+
+stream.print
+ssc.start

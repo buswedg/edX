@@ -1,0 +1,6 @@
+SET hive.execution.engine=tez;
+SELECT Stock, CurrentPrice, ClosingPrice,
+       IF(CurrentPrice > ClosingPrice, 'Up',
+	      IF (CurrentPrice < ClosingPrice, 'Down', '-')) AS Status
+FROM StockPrices
+ORDER BY Stock;

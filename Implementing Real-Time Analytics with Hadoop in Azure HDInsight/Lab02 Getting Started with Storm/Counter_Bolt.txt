@@ -1,0 +1,92 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Microsoft.SCP;
+using Microsoft.HBase.Client;
+using org.apache.hadoop.hbase.rest.protobuf.generated;
+
+namespace SensorStream
+{
+    public class Counter_Bolt : ISCPBolt
+    {
+        private Context ctx;
+
+        // tuple fields
+        private DateTime readingTime;
+        private string sensorName;
+
+        // HBase settings
+        string clusterURL = "https://clustername.azurehdinsight.net";
+        string hadoopUsername = "username";
+        string hadoopUserPassword = "password";
+
+        // Cached readings
+        Dictionary<string, List<DateTime>> sensors = new Dictionary<string, List<DateTime>>();
+
+
+        public Counter_Bolt(Context ctx)
+        {
+            this.ctx = ctx;
+            Dictionary<string, List<Type>> inputSchema = new Dictionary<string, List<Type>>();
+            inputSchema.Add("default", new List<Type>() { typeof(DateTime), typeof(string), typeof(int) });
+            inputSchema.Add(Constants.SYSTEM_TICK_STREAM_ID, new List<Type> { typeof(long) });
+            this.ctx.DeclareComponentSchema(new ComponentStreamSchema(inputSchema, null));
+
+        }
+
+        public static Counter_Bolt Get(Context ctx, Dictionary<string, Object> parms)
+        {
+            return new Counter_Bolt(ctx);
+        }
+
+        private static bool StaleReading(DateTime d)
+        {
+            return d < DateTime.Now.Subtract(new TimeSpan(0, 1, 0));
+        }
+
+        public void Execute(SCPTuple tuple)
+        {
+            var isTickTuple = tuple.GetSourceStreamId().Equals(Constants.SYSTEM_TICK_STREAM_ID);
+            if (!isTickTuple)
+            {
+                // Get data from tuple
+                readingTime = (DateTime)tuple.GetValue(0);
+                sensorName = tuple.GetString(1);
+
+                // cache this reading
+                if (sensors.ContainsKey(sensorName))
+                {
+                    sensors[sensorName].Add(readingTime);
+                }
+                else
+                {
+                    sensors.Add(sensorName, new List<DateTime>() { readingTime });
+                }
+            }
+            else
+            {
+                // process each sensor for which we have readings
+                foreach (KeyValuePair<string, List<DateTime>> readings in sensors)
+                {
+                    // remove readings over a minute old
+                    readings.Value.RemoveAll(StaleReading);
+
+                    // count remaining readings
+                    int numReadings = readings.Value.Count();
+
+                    // write reading count to HBase
+                    ClusterCredentials creds = new ClusterCredentials(new Uri(clusterURL), hadoopUsername, hadoopUserPassword);
+                    HBaseClient hbaseClient = new HBaseClient(creds);
+
+                    CellSet cellSet = new CellSet();
+                    CellSet.Row cellSetRow = new CellSet.Row { key = Encoding.UTF8.GetBytes(readings.Key) };
+                    cellSet.rows.Add(cellSetRow);
+                    Cell valueCell = new Cell { column = Encoding.UTF8.GetBytes("Reading:Count"), data = Encoding.UTF8.GetBytes(numReadings.ToString()) };
+                    cellSetRow.values.Add(valueCell);
+                    hbaseClient.StoreCells("Sensors", cellSet);
+                }
+            }
+        }
+    }
+}

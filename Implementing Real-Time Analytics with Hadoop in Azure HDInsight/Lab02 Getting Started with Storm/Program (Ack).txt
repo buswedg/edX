@@ -1,0 +1,40 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.SCP;
+using Microsoft.SCP.Topology;
+
+namespace SensorStream
+{
+    [Active(true)]
+    class Program : TopologyDescriptor
+    {
+        static void Main(string[] args)
+        {
+        }
+
+        public ITopologyBuilder GetTopologyBuilder()
+        {
+            TopologyBuilder topologyBuilder = new TopologyBuilder("SensorStream");
+
+            topologyBuilder.SetSpout(
+                "SensorReader_Spout",
+                Spout.Get,
+                new Dictionary<string, List<string>>()
+                {
+                    {Constants.DEFAULT_STREAM_ID, new List<string>(){"readingTime", "sensorName", "sensorValue"}}
+                },
+                1,true);
+            topologyBuilder.SetBolt(
+                "SensorWriter_Bolt",
+                Bolt.Get,
+                new Dictionary<string, List<string>>(),
+                4, true).shuffleGrouping("SensorReader_Spout");
+
+            return topologyBuilder;
+        }
+    }
+}
+

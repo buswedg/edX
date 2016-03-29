@@ -1,0 +1,71 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.SCP;
+
+namespace SensorStream
+{
+    public class Spout : ISCPSpout
+    {
+        private Context ctx;
+
+        // add variables for retry logic
+        private bool enableAck = false;
+        private long tupSeqId = 0;
+        Dictionary<long, Values> cachedTuples = new Dictionary<long, Values>();
+
+        public Spout(Context ctx)
+        {
+            this.ctx = ctx;
+
+            Dictionary<string, List<Type>> outputSchema = new Dictionary<string, List<Type>>();
+            outputSchema.Add("default", new List<Type>() { typeof(DateTime), typeof(string), typeof(int) });
+            this.ctx.DeclareComponentSchema(new ComponentStreamSchema(null, outputSchema));
+
+            // Set enableAck flag based on config
+            if (Context.Config.pluginConf.ContainsKey(Constants.NONTRANSACTIONAL_ENABLE_ACK))
+            {
+                enableAck = (bool)(Context.Config.pluginConf[Constants.NONTRANSACTIONAL_ENABLE_ACK]);
+            }
+        }
+
+        public static Spout Get(Context ctx, Dictionary<string, Object> parms)
+        {
+            return new Spout(ctx);
+        }
+
+        public void NextTuple(Dictionary<string, Object> parms)
+        {
+            Values sensorReading = Sensor.GetSensorReading();
+
+            if (enableAck)
+            {
+                // If ack is enabled, include a sequence ID
+                tupSeqId++;
+                cachedTuples.Add(tupSeqId, sensorReading);
+                ctx.Emit(Constants.DEFAULT_STREAM_ID, sensorReading, tupSeqId);
+            }
+            else
+            {
+                ctx.Emit(Constants.DEFAULT_STREAM_ID, sensorReading);
+            }
+        }
+
+        public void Ack(long seqId, Dictionary<string, Object> parms)
+        {
+            // remove cached tuple
+            if (enableAck)
+            {
+                cachedTuples.Remove(seqId);
+            }
+        }
+
+        public void Fail(long seqId, Dictionary<string, Object> parms)
+        {
+            // retry failed tuple
+            if (cachedTuples.ContainsKey(seqId))
+            {
+                ctx.Emit(Constants.DEFAULT_STREAM_ID, cachedTuples[seqId], seqId);
+            }
+        }
+    }
+}

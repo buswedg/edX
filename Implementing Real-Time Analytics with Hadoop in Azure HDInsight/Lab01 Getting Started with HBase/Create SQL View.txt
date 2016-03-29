@@ -1,0 +1,4 @@
+CREATE VIEW "Stocks"
+(StockCode VARCHAR PRIMARY KEY,
+ "Closing"."Price" DECIMAL,
+ "Current"."Price" DECIMAL);

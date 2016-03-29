@@ -1,0 +1,26 @@
+# import sql types
+from pyspark.sql.types import *
+
+# load text file
+csv = sc.textFile("/HdiSamples/SensorSampleData/building/building.csv")
+
+# create schema
+schma = StructType([StructField("BuildingID", IntegerType(), False),StructField("BuildingAge", IntegerType(), False),StructField("HVACProduct", StringType(), False)])
+
+# parse data
+data = csv.map(lambda s: s.split(",")).filter(lambda s: s[0] != "BuildingID").map(lambda s:(int(s[0]), int(s[2]), str(s[3]) ))
+
+# create dataframe
+df = sqlContext.createDataFrame(data,schma)
+
+# register temp table
+df.registerAsTable("tmpBuilding")
+
+# query temp table
+buildings = sqlContext.sql("select * from tmpBuilding")
+
+# show results
+buildings.show()
+
+# save as table
+df.saveAsTable("building")

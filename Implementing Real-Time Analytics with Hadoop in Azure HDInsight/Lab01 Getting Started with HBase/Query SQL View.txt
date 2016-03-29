@@ -1,0 +1,3 @@
+SELECT StockCode, "Current"."Price"
+FROM "Stocks"
+WHERE "Current"."Price" > "Closing"."Price";

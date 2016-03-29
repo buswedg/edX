@@ -1,0 +1,27 @@
+using System;
+using System.Text;
+using System.Threading;
+using Microsoft.ServiceBus.Messaging;
+
+namespace EventClient
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string eventHubName = "event_hub_name";
+            string connectionString = "sendpolicy_connection_string";
+            var eventHubClient = EventHubClient.CreateFromConnectionString(connectionString, eventHubName);
+            Random r = new Random();
+
+            while (true)
+            {
+                var sensorReading = r.Next().ToString();
+                Console.WriteLine("{0} > Sensor reading: {1}", DateTime.Now, sensorReading);
+                eventHubClient.Send(new EventData(Encoding.UTF8.GetBytes(sensorReading)));
+                Thread.Sleep(200);
+            }
+
+        }
+    }
+}

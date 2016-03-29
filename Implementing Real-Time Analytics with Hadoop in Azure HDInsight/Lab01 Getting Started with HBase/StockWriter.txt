@@ -1,0 +1,56 @@
+﻿using System;
+using System.Text;
+using Microsoft.HBase.Client;
+using org.apache.hadoop.hbase.rest.protobuf.generated;
+
+namespace StockWriter
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+
+            while (true)
+            {
+                Random rnd = new Random();
+                Console.Clear();
+
+                string clusterURL = "https://hb12345.azurehdinsight.net";
+                string userName = "HDUser";
+                string password = "HDPa$$w0rd";
+
+                // Connect to HBase cluster
+                ClusterCredentials creds = new ClusterCredentials(new Uri(clusterURL), 
+                                                                  userName, password);
+                HBaseClient hbaseClient = new HBaseClient(creds);
+
+                // Get all stocks
+                Scanner scanSettings = new Scanner()
+                {
+                    batch = 10,
+                    startRow = Encoding.UTF8.GetBytes("AAA"),
+                    endRow = Encoding.UTF8.GetBytes("ZZZ")
+                };
+
+                ScannerInformation stockScanner = hbaseClient.CreateScanner("Stocks", scanSettings);
+                CellSet stockCells = null;
+                while ((stockCells = hbaseClient.ScannerGetNext(stockScanner)) != null)
+                {
+                    foreach (var row in stockCells.rows)
+                    {
+                        string stock = Encoding.UTF8.GetString(row.key);
+                        Double currentPrice = Double.Parse(Encoding.UTF8.GetString(row.values[1].data));
+                        Double newPrice = currentPrice + (rnd.NextDouble() * (1 - -1) + -1);
+                        Cell c = new Cell { column = Encoding.UTF8.GetBytes("Current:Price"), data = 
+                           Encoding.UTF8.GetBytes(newPrice.ToString()) };
+                        row.values.Insert(2, c);
+                        Console.WriteLine(stock + ": " + currentPrice.ToString() + " := "
+                                                       + newPrice.ToString());
+                    }
+                    hbaseClient.StoreCells("Stocks", stockCells);
+                }   
+            }
+
+        }
+    }
+}
